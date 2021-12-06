@@ -12,6 +12,7 @@
     "eth-revert-reason": "^1.0.3",
     "hardhat": "^2.6.2",
     "hardhat-contract-sizer": "^2.1.1",
+    "mocha": "^9.1.3",
     "uniswap": "^0.0.1",
     "uniswap-v3-deploy-plugin": "^0.1.0",
     "web3": "^1.5.2"
