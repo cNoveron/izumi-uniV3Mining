@@ -4,9 +4,9 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");;
 var uniV3 = require("./uniswap/deployUniV3.js");
 
-async function deployToken(name, symbol) {
+async function deployToken(name, symbol, decimals) {
   var tokenFactory = await ethers.getContractFactory("TestToken");
-  var token = await tokenFactory.deploy(name, symbol);
+  var token = await tokenFactory.deploy(name, symbol, decimals);
   return token;
 }
 async function attachToken(address) {
@@ -18,9 +18,9 @@ async function getToken() {
 
   // deploy token
   const tokenFactory = await ethers.getContractFactory("TestToken")
-  tokenX = await tokenFactory.deploy('a', 'a');
+  tokenX = await tokenFactory.deploy('a', 'a', 18);
   await tokenX.deployed();
-  tokenY = await tokenFactory.deploy('b', 'b');
+  tokenY = await tokenFactory.deploy('b', 'b', 18);
   await tokenY.deployed();
 
   txAddr = tokenX.address.toLowerCase();
@@ -46,10 +46,10 @@ async function getMiningInfo(mining, miningID) {
   var uniLiquidity;
   var isUniPositionIDExternal;
   [
-    amountLock, 
-    vLiquidity, 
-    lastTouchAccRewardPerShareX128, 
-    uniPositionID, 
+    amountLock,
+    vLiquidity,
+    lastTouchAccRewardPerShareX128,
+    uniPositionID,
     uniLiquidity,
     isUniPositionIDExternal
   ] = await mining.miningInfos(miningID);
@@ -171,7 +171,7 @@ async function nftMint(
 async function getTokenStatus(mining, tokenId) {
     var vLiquidity, validVLiquidity, nIZI, lastTouchBlock, lastTouchAccRewardPerShare;
     [vLiquidity, validVLiquidity, nIZI, lastTouchBlock] = await mining.tokenStatus(tokenId);
-    
+
     lastTouchAccRewardPerShare = await mining.lastTouchAccRewardPerShare(tokenId);
 
     return {
@@ -256,6 +256,7 @@ function updateExpectGlobalStatus(rewardInfo, startBlock, endBlock, totalVLiquid
 }
 
 describe("mining one side with boost", function () {
+  this.timeout(50000)
     var signer, miner1, miner2, trader, tokenAProvider, tokenBProvider, recipient1, recipient2;
 
     var weth;
@@ -293,17 +294,18 @@ describe("mining one side with boost", function () {
     var mining2RewardNoBoost;
 
     var q128;
-    
+
     beforeEach(async function() {
-      
+
         [signer, miner1, miner2, trader, tokenAProvider, tokenBProvider] = await ethers.getSigners();
 
         // a fake weth
         const tokenFactory = await ethers.getContractFactory("TestToken");
-        weth = await tokenFactory.deploy('weth', 'weth');
+        weth = await tokenFactory.deploy('weth', 'weth', 18);
         wethAddr = weth.address;
 
         var deployed = await uniV3.deployUniV3(wethAddr, signer);
+
         uniFactory = deployed.uniFactory;
         uniSwapRouter = deployed.uniSwapRouter;
         uniPositionManager = deployed.uniPositionManager;
@@ -311,9 +313,9 @@ describe("mining one side with boost", function () {
         [tokenX, tokenY] = await getToken();
         sqrtPriceX_96 = "0x2000000000000000000000000";
         poolXYAddr = await uniPositionManager.createAndInitializePoolIfNecessary(tokenX.address, tokenY.address, "3000", sqrtPriceX_96);
-        
-        var tokenA = await deployToken("a", "a");
-        var tokenB = await deployToken('b', 'b');
+
+        var tokenA = await deployToken("a", "a", 18);
+        var tokenB = await deployToken('b', 'b', 18);
 
         rewardInfoA = {
             rewardToken: tokenA.address,
@@ -327,7 +329,7 @@ describe("mining one side with boost", function () {
             rewardPerBlock: "60000000000000",
             accRewardPerShare: "0",
         }
-        
+
         startBlock = "0";
         endBlock = "10000000000000000000";
 
@@ -346,18 +348,18 @@ describe("mining one side with boost", function () {
         console.log("b");
         await setProvideer(mining2RewardNoBoost, tokenB, tokenBProvider, "1000000000000000000000000");
         console.log("c");
-        
+
     });
-    
+
     it("mint with 2 rewards, no boost", async function () {
 
         var mining = mining2RewardNoBoost;
         console.log("before mint")
 
         await nftMint(
-            miner1, uniPositionManager, tokenX, tokenY, 
+            miner1, uniPositionManager, tokenX, tokenY,
             -12000, 27000, "10000000000000000", "10000000000000000");
-        
+
         console.log("before deposit")
         await uniPositionManager.connect(miner1).approve(mining.address, "1");
         await mining.connect(miner1).deposit("1", "1000000000000000");
@@ -375,7 +377,7 @@ describe("mining one side with boost", function () {
             lastTouchAccRewardPerShare: ["0", "0"]
         };
         await checkTokenStatus(mining, "1", expectTokenStatus);
-      
+
         await ethers.provider.send('evm_mine');
         await ethers.provider.send('evm_mine');
         await ethers.provider.send('evm_mine');
@@ -388,10 +390,10 @@ describe("mining one side with boost", function () {
         // phase 1
         var tokenStatus = await getTokenStatus(mining, "1");
         expectTokenStatus.vLiquidity = tokenStatus.vLiquidity.toString();
-        
+
         var rewards = await collectReward(mining, [rewardInfoA, rewardInfoB], miner1, "1");
         var checkBlock1 = await ethers.provider.getBlockNumber();
-        
+
         updateExpectGlobalStatus(rewardInfoA, checkBlock0, checkBlock1, totalVLiquidity);
         updateExpectGlobalStatus(rewardInfoB, checkBlock0, checkBlock1, totalVLiquidity);
 
@@ -410,5 +412,5 @@ describe("mining one side with boost", function () {
 
         await checkTokenStatus(mining, "1", expectTokenStatus);
     });
- 
+
 });
