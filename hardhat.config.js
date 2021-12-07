@@ -17,7 +17,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 const secret = require('./.secret.js');
 
-const sk = secret.pk;
+const mnemonic = "test test test test test test test test test test test junk";
 const izumiRpcUrl = "http://47.241.103.6:9545";
 
 /**
@@ -39,19 +39,25 @@ module.exports = {
       url: izumiRpcUrl,
       gas: 8000000,
       gasPrice: 2000000000,
-      accounts: [sk]
+      accounts: { mnemonic }
     },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
       gas: 10000000,
       gasPrice: 200000000,
-      accounts: [sk]
-    }
+      accounts: [secret.pk]
+    },
+    hardhat: {
+      host: 'localhost',
+      port: 8545,
+      gas: 10000000,
+      gasPrice: 875000000,
+    },
   },
   ethereum:{
       url: "",
       gas: 1,
       gasPrice: 1,
-      accounts: [sk]
+      accounts: { mnemonic }
   }
 };
